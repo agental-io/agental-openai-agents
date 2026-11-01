@@ -1,0 +1,29 @@
+name: CI
+
+# Weekly as well, so that an Agents SDK release inside the versions this package allows,
+# which it was not tested with, is tried before someone installs it.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - run: pip install -e . pytest mypy
+
+      - run: mypy
+
+      - run: pytest
