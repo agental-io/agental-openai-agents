@@ -91,4 +91,4 @@ mypy
 pytest
 ```
 
-The tests are in `tests`. The live tests, `test_live.py`, run only inside the agental repository, as they start its API on the local driver: they are not in this public repository. A sandbox on the local driver is a folder, so they give the client `files_root`, the folder the files API reads and writes, which is `/opt/agental` on every real sandbox. In the agental repository, install the agental SDK from its folder first, `pip install -e ../python`.
+The tests are in `tests`. The live tests, `test_live.py`, run only inside the agental repository, as they start its API on the local driver: they are not in this public repository. A sandbox on the local driver is a folder, so they give the client `files_root`, the folder the files API reads and writes, which is `/opt/agental` on every real sandbox. In the agental repository, install the agental SDK, agental-sdk, from its folder first, `pip install -e ../python`.
