@@ -27,3 +27,54 @@ jobs:
       - run: mypy
 
       - run: pytest
+
+  # This package is published to PyPI from here, by PyPI's trusted publishing (no token is
+  # kept): a push to main whose version PyPI does not have yet publishes it, with attestations,
+  # once the tests above passed. That push is the mirror's, which Deploy runs in agental's own
+  # repository only once a release is deployed, so the package never runs ahead of the API it
+  # calls. A version is bumped in the pull request that changes the SDK there.
+  publish:
+    needs: test
+    # Only the mirror's push, which Deploy makes once a release is deployed: a push to main
+    # made here by hand publishes nothing.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'Sync with agental v')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build, and say whether PyPI has this version
+        id: built
+        run: |
+          set -euo pipefail
+          pip install build
+          python -m build
+          wheel=$(ls dist/*.whl)
+          name=$(basename "${wheel}" | cut -d- -f1 | tr _ -)
+          version=$(basename "${wheel}" | cut -d- -f2)
+          status=$(curl -sL -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/${name}/${version}/json")
+          if [ "${status}" = 200 ]; then
+            echo "${name} ${version} is on PyPI already: nothing to publish."
+            echo "publish=false" >> "${GITHUB_OUTPUT}"
+          elif [ "${status}" = 404 ]; then
+            echo "Publishing ${name} ${version}."
+            echo "publish=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "PyPI answered ${status} for ${name} ${version}." >&2
+            exit 1
+          fi
+
+      - if: steps.built.outputs.publish == 'true'
+        uses: pypa/gh-action-pypi-publish@v1.14.3
+        with:
+          # A second run that finds the version taken meanwhile passes.
+          skip-existing: true
